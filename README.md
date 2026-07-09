@@ -27,6 +27,16 @@ python3 -m http.server 8080
 # Then open http://localhost:8080
 ```
 
+## Live demo (GitHub Pages)
+
+After Pages is enabled, the app is available at:
+
+**https://rbarnabas.github.io/AuralCanvas/**
+
+> Hard-refresh (Cmd+Shift+R) if you still see the old version after an update.
+
+To enable Pages manually: GitHub repo → **Settings** → **Pages** → Source: **GitHub Actions**.
+
 ## Usage
 
 1. Click the canvas to enable audio
