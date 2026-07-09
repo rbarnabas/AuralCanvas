@@ -19,7 +19,7 @@ const state = {
   speed: 0,
   zoom: 1,
   autoAngle: 0,
-  axisTool: true,
+  axisTool: false,
   draggingAxis: false,
   pointer: { down: false, x: 0, y: 0, nx: 0, ny: 0 },
   lastFreq: 0,
@@ -161,13 +161,13 @@ function frame(now) {
   const regions = fluid.samplePaintRegions(audio.voiceCount);
   audio.updatePaintVoices(regions, state.axisX, state.axisY);
 
-  if (state.pointer.down && !state.axisTool) {
+  if (state.pointer.down && !state.draggingAxis) {
     const freq = audio.updatePointerSound(state.pointer.nx, state.pointer.ny, state.axisX, state.axisY, true);
     if (freq != null) {
       state.lastFreq = freq;
       document.getElementById("freq-readout").textContent = `${Math.round(freq)} Hz`;
     }
-  } else {
+  } else if (!state.pointer.down) {
     audio.updatePointerSound(0, 0, 0, 0, false);
   }
 
@@ -180,14 +180,20 @@ function splatFromPointer(nx, ny, dx, dy) {
   fluid.splat(nx, ny, dx, dy);
 }
 
-function onPointerDown(e) {
-  audio.resume();
+async function onPointerDown(e) {
+  e.preventDefault();
+  if (e.target.setPointerCapture) {
+    try {
+      e.target.setPointerCapture(e.pointerId);
+    } catch (_) {}
+  }
+  await audio.resume();
   const local = screenToLocal(e.clientX, e.clientY);
 
   if (state.axisTool) {
     const axis = axisScreenPos();
     const dist = Math.hypot(local.rawX - axis.x, local.rawY - axis.y);
-    if (dist < 24) {
+    if (dist < 18) {
       state.draggingAxis = true;
       canvasWrap.classList.add("axis-dragging");
       return;
@@ -234,16 +240,24 @@ function onPointerMove(e) {
   state.pointer.ny = local.ny;
 }
 
-function onPointerUp() {
+function onPointerUp(e) {
+  if (e?.target?.releasePointerCapture) {
+    try {
+      e.target.releasePointerCapture(e.pointerId);
+    } catch (_) {}
+  }
   state.pointer.down = false;
   state.draggingAxis = false;
   canvasWrap.classList.remove("axis-dragging");
 }
 
-canvasWrap.addEventListener("pointerdown", onPointerDown);
-canvasWrap.addEventListener("pointermove", onPointerMove);
-canvasWrap.addEventListener("pointerup", onPointerUp);
-canvasWrap.addEventListener("pointerleave", onPointerUp);
+for (const target of [fluidCanvas, canvasWrap]) {
+  target.addEventListener("pointerdown", onPointerDown);
+  target.addEventListener("pointermove", onPointerMove);
+  target.addEventListener("pointerup", onPointerUp);
+  target.addEventListener("pointercancel", onPointerUp);
+  target.addEventListener("pointerleave", onPointerUp);
+}
 
 // --- UI bindings ---
 function bindRange(id, outId, fmt, onChange) {

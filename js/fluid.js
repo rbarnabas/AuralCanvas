@@ -22,10 +22,11 @@ export class FluidSim {
     this.prevVelX = new Float32Array(N * N);
     this.prevVelY = new Float32Array(N * N);
 
-    this.iterations = 10;
-    this.diffusion = 0.0001;
-    this.viscosity = 0.0001;
-    this.dissipation = 0.985;
+    this.iterations = 8;
+    this.diffusion = 0.0002;
+    this.viscosity = 0.0002;
+    this.densityDecay = 0.998;
+    this.velocityDecay = 0.99;
     this.mode = "paint";
     this.color = { r: 0.42, g: 0.36, b: 0.9 };
     this.splatRadius = 0.25;
@@ -56,16 +57,16 @@ export class FluidSim {
 
   /** Normalized UV 0..1 */
   splat(nx, ny, dx, dy) {
-    const radius = this.splatRadius * 0.15;
-    const force = this.splatForce * 0.00001;
+    const radius = this.splatRadius * 0.18;
+    const force = this.splatForce * 0.00002;
     const push = this.pushStrength;
 
-    const cx = Math.floor(nx * N);
-    const cy = Math.floor(ny * N);
-    const r = Math.max(2, Math.floor(radius * N));
+    const cx = nx * N;
+    const cy = ny * N;
+    const r = Math.max(3, radius * N);
 
-    for (let y = Math.max(0, cy - r); y < Math.min(N, cy + r); y++) {
-      for (let x = Math.max(0, cx - r); x < Math.min(N, cx + r); x++) {
+    for (let y = Math.max(1, Math.floor(cy - r)); y < Math.min(N - 1, Math.ceil(cy + r)); y++) {
+      for (let x = Math.max(1, Math.floor(cx - r)); x < Math.min(N - 1, Math.ceil(cx + r)); x++) {
         const dist = Math.hypot(x - cx, y - cy) / r;
         if (dist > 1) continue;
         const falloff = (1 - dist) * (1 - dist);
@@ -75,39 +76,46 @@ export class FluidSim {
         this.velY[i] += dy * force * push * falloff;
 
         if (this.mode === "paint") {
-          this.densityR[i] += this.color.r * falloff * 0.8;
-          this.densityG[i] += this.color.g * falloff * 0.8;
-          this.densityB[i] += this.color.b * falloff * 0.8;
+          const amount = falloff * 2.5;
+          this.densityR[i] = Math.min(4, this.densityR[i] + this.color.r * amount);
+          this.densityG[i] = Math.min(4, this.densityG[i] + this.color.g * amount);
+          this.densityB[i] = Math.min(4, this.densityB[i] + this.color.b * amount);
         }
       }
     }
   }
 
   step(dt) {
-    this.diffuse(this.prevVelX, this.velX, this.viscosity, dt);
-    this.diffuse(this.prevVelY, this.velY, this.viscosity, dt);
-    this.project(this.prevVelX, this.prevVelY, this.velX, this.velY);
+    this.prevVelX.set(this.velX);
+    this.prevVelY.set(this.velY);
+    this.diffuse(this.velX, this.prevVelX, this.viscosity, dt);
+    this.diffuse(this.velY, this.prevVelY, this.viscosity, dt);
+    this.project(this.velX, this.velY, this.prevVelX, this.prevVelY);
 
+    this.prevVelX.set(this.velX);
+    this.prevVelY.set(this.velY);
     this.advect(this.velX, this.prevVelX, this.prevVelX, this.prevVelY, dt);
     this.advect(this.velY, this.prevVelY, this.prevVelX, this.prevVelY, dt);
     this.project(this.velX, this.velY, this.prevVelX, this.prevVelY);
 
-    this.diffuse(this.prevDensityR, this.densityR, this.diffusion, dt);
-    this.diffuse(this.prevDensityG, this.densityG, this.diffusion, dt);
-    this.diffuse(this.prevDensityB, this.densityB, this.diffusion, dt);
-
+    this.prevDensityR.set(this.densityR);
+    this.prevDensityG.set(this.densityG);
+    this.prevDensityB.set(this.densityB);
     this.advect(this.densityR, this.prevDensityR, this.velX, this.velY, dt);
     this.advect(this.densityG, this.prevDensityG, this.velX, this.velY, dt);
     this.advect(this.densityB, this.prevDensityB, this.velX, this.velY, dt);
 
     for (let i = 0; i < N * N; i++) {
-      this.densityR[i] *= this.dissipation;
-      this.densityG[i] *= this.dissipation;
-      this.densityB[i] *= this.dissipation;
+      this.densityR[i] *= this.densityDecay;
+      this.densityG[i] *= this.densityDecay;
+      this.densityB[i] *= this.densityDecay;
+      this.velX[i] *= this.velocityDecay;
+      this.velY[i] *= this.velocityDecay;
     }
   }
 
   diffuse(out, src, diff, dt) {
+    out.set(src);
     const a = dt * diff * N * N;
     for (let k = 0; k < this.iterations; k++) {
       for (let y = 1; y < N - 1; y++) {
@@ -124,6 +132,7 @@ export class FluidSim {
         }
       }
       this.setBoundary(0, out);
+      src.set(out);
     }
   }
 
@@ -211,7 +220,6 @@ export class FluidSim {
     arr[idx(N - 1, N - 1)] = 0.5 * (arr[idx(N - 2, N - 1)] + arr[idx(N - 1, N - 2)]);
   }
 
-  /** Sample active paint regions for audio — returns [{nx, ny, intensity}] */
   samplePaintRegions(maxSamples = 8) {
     const cells = [];
     const stride = 4;
@@ -219,7 +227,7 @@ export class FluidSim {
       for (let x = 0; x < N; x += stride) {
         const i = idx(x, y);
         const intensity = this.densityR[i] + this.densityG[i] + this.densityB[i];
-        if (intensity > 0.05) {
+        if (intensity > 0.08) {
           cells.push({ nx: x / N, ny: y / N, intensity });
         }
       }
@@ -235,14 +243,17 @@ export class FluidSim {
       for (let x = 0; x < N; x++) {
         const i = idx(x, y);
         const pi = (x + y * N) * 4;
-        const r = Math.min(255, this.densityR[i] * 255);
-        const g = Math.min(255, this.densityG[i] * 255);
-        const b = Math.min(255, this.densityB[i] * 255);
-        const a = Math.min(255, (r + g + b) * 0.5);
+        const dr = this.densityR[i];
+        const dg = this.densityG[i];
+        const db = this.densityB[i];
+        const r = Math.min(255, dr * 80);
+        const g = Math.min(255, dg * 80);
+        const b = Math.min(255, db * 80);
+        const a = Math.min(255, (dr + dg + db) * 40);
         data[pi] = r;
         data[pi + 1] = g;
         data[pi + 2] = b;
-        data[pi + 3] = a;
+        data[pi + 3] = a > 8 ? a : 0;
       }
     }
 

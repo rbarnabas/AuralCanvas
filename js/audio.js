@@ -75,7 +75,7 @@ export class AudioEngine {
   posToAmp(ny, axisY) {
     const dy = Math.abs(ny - axisY);
     const amp = 1 - Math.min(1, dy * 2);
-    return 0.05 + amp * this.yAmplitude * 0.35;
+    return 0.12 + amp * this.yAmplitude * 0.45;
   }
 
   createVoice(freq, amp) {
