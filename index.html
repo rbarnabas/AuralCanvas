@@ -3,14 +3,15 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="aural-canvas-version" content="7cbdeb8" />
   <title>Aural Canvas — Liquid Paint & Sound</title>
-  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/style.css?v=7cbdeb8" />
 </head>
 <body>
   <div id="app">
     <header class="header">
       <h1>Aural Canvas</h1>
-      <p class="subtitle">Liquid paint on a moving sonic canvas</p>
+      <p class="subtitle">Liquid paint on a moving sonic canvas · build 7cbdeb8</p>
     </header>
 
     <div class="workspace">
@@ -87,7 +88,7 @@
           <canvas id="overlay-canvas"></canvas>
         </div>
         <div class="canvas-toolbar">
-          <button id="btn-axis-tool" class="tool-btn active" title="Move frequency axis">Axis Tool</button>
+          <button id="btn-axis-tool" class="tool-btn" title="Move frequency axis">Axis Tool</button>
           <button id="btn-clear" class="tool-btn danger">Clear Canvas</button>
           <span id="freq-readout" class="freq-readout">— Hz</span>
         </div>
@@ -146,6 +147,7 @@
         <section class="panel-section help">
           <h2>How to Play</h2>
           <ul>
+            <li>Run via a local server after download — do not double-click <code>index.html</code></li>
             <li><strong>Paint</strong> — add liquid color and push fluid</li>
             <li><strong>Push</strong> — move existing paint only</li>
             <li><strong>Axis Tool</strong> — drag the crosshair to set 0 Hz origin</li>
@@ -167,7 +169,7 @@
       }
     });
   </script>
-  <script type="module" src="js/main.js"></script>
+  <script type="module" src="js/main.js?v=7cbdeb8"></script>
   <p id="boot-error" hidden style="position:fixed;bottom:12px;left:12px;right:12px;padding:12px;background:#e74c3c;color:#fff;border-radius:8px;z-index:9999;font-size:13px;"></p>
 </body>
 </html>

@@ -15,17 +15,22 @@ Inspired by [Binaura Loom](https://www.binaura.net/loom/?mode=editor), [Pixel Po
 - **Live volume control** — adjust while performing
 - **Record & export** — WebM video, MP4 (via ffmpeg.wasm), WAV audio, MP3 audio
 
-## Run locally
+## Download ZIP
 
-Because the app uses ES modules, serve it over HTTP (opening `index.html` directly may not work in all browsers):
+Latest master ZIP (always includes newest JS/CSS fixes):
+
+**https://github.com/rbarnabas/AuralCanvas/archive/refs/heads/master.zip**
+
+After extracting, start a local server inside the folder:
 
 ```bash
-# Python 3
-cd aural-canvas
+cd AuralCanvas-master
 python3 -m http.server 8080
-
-# Then open http://localhost:8080
+# open http://localhost:8080
 ```
+
+> Do **not** open `index.html` directly from Finder/Explorer. ES modules require HTTP.
+> Check the subtitle for `build 7cbdeb8` to confirm you have the fixed version.
 
 ## Live demo (GitHub Pages)
 
