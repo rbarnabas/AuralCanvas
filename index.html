@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Aural Canvas — Liquid Paint & Sound</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div id="app">
+    <header class="header">
+      <h1>Aural Canvas</h1>
+      <p class="subtitle">Liquid paint on a moving sonic canvas</p>
+    </header>
+
+    <div class="workspace">
+      <aside class="panel panel-left">
+        <section class="panel-section">
+          <h2>Mode</h2>
+          <div class="mode-toggle">
+            <button id="btn-paint" class="mode-btn active" data-mode="paint">Paint</button>
+            <button id="btn-push" class="mode-btn" data-mode="push">Push</button>
+          </div>
+        </section>
+
+        <section class="panel-section">
+          <h2>Paint</h2>
+          <label class="control">
+            <span>Color</span>
+            <input type="color" id="paint-color" value="#6c5ce7" />
+          </label>
+          <label class="control">
+            <span>Size <output id="out-size">0.25</output></span>
+            <input type="range" id="paint-size" min="0.01" max="1" step="0.01" value="0.25" />
+          </label>
+          <label class="control">
+            <span>Force <output id="out-force">6000</output></span>
+            <input type="range" id="paint-force" min="100" max="20000" step="100" value="6000" />
+          </label>
+          <label class="control">
+            <span>Push <output id="out-push">0.5</output></span>
+            <input type="range" id="paint-push" min="0" max="2" step="0.01" value="0.5" />
+          </label>
+        </section>
+
+        <section class="panel-section">
+          <h2>Canvas (Loom)</h2>
+          <label class="control">
+            <span>Rotation <output id="out-rotation">0°</output></span>
+            <input type="range" id="canvas-rotation" min="-180" max="180" step="1" value="0" />
+          </label>
+          <label class="control">
+            <span>Speed <output id="out-speed">0</output></span>
+            <input type="range" id="canvas-speed" min="-5" max="5" step="0.1" value="0" />
+          </label>
+          <label class="control">
+            <span>Zoom <output id="out-zoom">1</output></span>
+            <input type="range" id="canvas-zoom" min="0.5" max="2" step="0.05" value="1" />
+          </label>
+        </section>
+
+        <section class="panel-section">
+          <h2>Frequency Axis</h2>
+          <p class="hint">Drag the crosshair on canvas or use sliders</p>
+          <label class="control">
+            <span>Axis X <output id="out-axis-x">50%</output></span>
+            <input type="range" id="axis-x" min="0" max="100" step="0.5" value="50" />
+          </label>
+          <label class="control">
+            <span>Axis Y <output id="out-axis-y">50%</output></span>
+            <input type="range" id="axis-y" min="0" max="100" step="0.5" value="50" />
+          </label>
+          <label class="control">
+            <span>Freq Min <output id="out-freq-min">0 Hz</output></span>
+            <input type="range" id="freq-min" min="0" max="1000" step="1" value="0" />
+          </label>
+          <label class="control">
+            <span>Freq Max <output id="out-freq-max">1000 Hz</output></span>
+            <input type="range" id="freq-max" min="0" max="1000" step="1" value="1000" />
+          </label>
+        </section>
+      </aside>
+
+      <main class="canvas-area">
+        <div class="canvas-wrap" id="canvas-wrap">
+          <canvas id="fluid-canvas"></canvas>
+          <canvas id="overlay-canvas"></canvas>
+        </div>
+        <div class="canvas-toolbar">
+          <button id="btn-axis-tool" class="tool-btn active" title="Move frequency axis">Axis Tool</button>
+          <button id="btn-clear" class="tool-btn danger">Clear Canvas</button>
+          <span id="freq-readout" class="freq-readout">— Hz</span>
+        </div>
+      </main>
+
+      <aside class="panel panel-right">
+        <section class="panel-section">
+          <h2>Audio</h2>
+          <label class="control">
+            <span>Volume <output id="out-volume">70%</output></span>
+            <input type="range" id="volume" min="0" max="100" step="1" value="70" />
+          </label>
+          <label class="control">
+            <span>Waveform</span>
+            <select id="waveform">
+              <option value="sine">Sine</option>
+              <option value="square">Square</option>
+              <option value="sawtooth">Sawtooth</option>
+              <option value="triangle">Triangle</option>
+            </select>
+          </label>
+          <label class="control">
+            <span>Y → Amplitude <output id="out-y-amp">on</output></span>
+            <input type="range" id="y-amplitude" min="0" max="1" step="0.05" value="1" />
+          </label>
+          <label class="control">
+            <span>Voices <output id="out-voices">4</output></span>
+            <input type="range" id="voice-count" min="1" max="8" step="1" value="4" />
+          </label>
+        </section>
+
+        <section class="panel-section">
+          <h2>Sample Import</h2>
+          <label class="control file-label">
+            <span>Upload .wav / .mp3</span>
+            <input type="file" id="audio-upload" accept=".wav,.mp3,audio/wav,audio/mpeg" />
+          </label>
+          <button id="btn-use-tone" class="tool-btn" disabled>Use Tone Generator</button>
+          <p id="sample-name" class="hint">Default: oscillator tone</p>
+        </section>
+
+        <section class="panel-section">
+          <h2>Record & Export</h2>
+          <div class="record-row">
+            <button id="btn-record" class="record-btn">● Record</button>
+            <span id="record-status" class="hint">Ready</span>
+          </div>
+          <div class="export-grid">
+            <button id="export-webm" class="export-btn" disabled>WebM</button>
+            <button id="export-mp4" class="export-btn" disabled>MP4</button>
+            <button id="export-wav" class="export-btn" disabled>WAV</button>
+            <button id="export-mp3" class="export-btn" disabled>MP3</button>
+          </div>
+        </section>
+
+        <section class="panel-section help">
+          <h2>How to Play</h2>
+          <ul>
+            <li><strong>Paint</strong> — add liquid color and push fluid</li>
+            <li><strong>Push</strong> — move existing paint only</li>
+            <li><strong>Axis Tool</strong> — drag the crosshair to set 0 Hz origin</li>
+            <li>X axis maps 0–1000 Hz; Y modulates amplitude</li>
+            <li>Click canvas once to enable audio</li>
+          </ul>
+        </section>
+      </aside>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js"></script>
+  <script type="module">
+    window.addEventListener("error", (e) => {
+      const el = document.getElementById("boot-error");
+      if (el) {
+        el.hidden = false;
+        el.textContent = "App failed to load: " + (e.message || "unknown error");
+      }
+    });
+  </script>
+  <script type="module" src="js/main.js"></script>
+  <p id="boot-error" hidden style="position:fixed;bottom:12px;left:12px;right:12px;padding:12px;background:#e74c3c;color:#fff;border-radius:8px;z-index:9999;font-size:13px;"></p>
+</body>
+</html>
