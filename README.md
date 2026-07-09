@@ -30,7 +30,7 @@ python3 -m http.server 8080
 ```
 
 > Do **not** open `index.html` directly from Finder/Explorer. ES modules require HTTP.
-> Check the subtitle for `build 7cbdeb8` to confirm you have the fixed version.
+> Check the subtitle for `build 9d23ea5` to confirm you have the fixed version.
 
 ## Live demo (GitHub Pages)
 
