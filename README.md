@@ -50,6 +50,85 @@ To enable Pages manually: GitHub repo → **Settings** → **Pages** → Source:
 4. Adjust sliders live while drawing — rotation, speed, paint force, frequencies
 5. Hit **Record**, perform your piece, then **Stop** and export
 
+## Desktop app (Electron)
+
+Aural Canvas can be packaged as a standalone Mac `.dmg` and Windows `.exe` installer.
+
+### Prerequisites
+
+- [Node.js](https://nodejs.org/) 20 LTS or newer (includes `npm`)
+- macOS to build `.dmg` locally; Windows to build `.exe` locally
+- Cross-platform builds also run via GitHub Actions (see below)
+
+### Step 1 — Install dependencies
+
+```bash
+cd aural-canvas   # or AuralCanvas-master after clone
+npm install
+```
+
+This installs `electron` and `electron-builder` as dev dependencies.
+
+### Step 2 — Run in development
+
+```bash
+npm start
+```
+
+Opens the app in an Electron window (DevTools enabled when unpackaged).
+
+### Step 3 — Build production installers
+
+```bash
+# Current platform only
+npm run build
+
+# macOS .dmg (Intel + Apple Silicon)
+npm run build:mac
+
+# Windows .exe (NSIS installer)
+npm run build:win
+
+# Both (requires platform toolchains / CI for cross-build)
+npm run build:all
+```
+
+Installers are written to `dist/`:
+
+| Platform | Output |
+|----------|--------|
+| macOS | `Aural Canvas-1.0.0-mac-arm64.dmg`, `...-x64.dmg` |
+| Windows | `Aural Canvas-1.0.0-win-x64.exe` |
+
+### Step 4 — Optional custom icons
+
+Add branded icons before release builds (see `build/README.md`):
+
+- `build/icon.icns` — macOS
+- `build/icon.ico` — Windows
+
+### Step 5 — GitHub Actions releases
+
+Push a version tag to build installers in the cloud and attach them to a GitHub Release:
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+Or run **Actions → Build Desktop App → Run workflow** manually.
+
+### Project layout
+
+```
+electron/
+  main.js      # Electron main process (window, permissions, menu)
+  preload.js   # Secure bridge exposed as window.auralCanvas
+package.json   # Scripts + electron-builder config
+build/         # Icons and macOS entitlements
+dist/          # Generated installers (gitignored)
+```
+
 ## Browser support
 
 - Chrome / Edge recommended for recording (WebM + MediaRecorder)
