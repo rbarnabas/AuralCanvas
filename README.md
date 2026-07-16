@@ -2,6 +2,18 @@
 
 Liquid paint on a moving sonic canvas — combining fluid painting, frequency-mapped audio, and live recording.
 
+## Download desktop app
+
+**[Latest release — Mac .dmg & Windows .exe](https://github.com/rbarnabas/AuralCanvas/releases/latest)**
+
+| Platform | File | Install |
+|----------|------|---------|
+| **macOS** (Apple Silicon) | `Aural Canvas-*-mac-arm64.dmg` | Open `.dmg` → drag to Applications |
+| **macOS** (Intel) | `Aural Canvas-*-mac-x64.dmg` | Open `.dmg` → drag to Applications |
+| **Windows** | `Aural Canvas-*-win-x64.exe` | Run installer → follow prompts |
+
+No Node.js or extra setup required.
+
 Inspired by [Binaura Loom](https://www.binaura.net/loom/?mode=editor), [Pixel Pour](https://bitbof.com/experiments/2019_01_27_pixel_pour/), and [Tone Generator](https://www.szynalski.com/tone-generator/).
 
 ## Features

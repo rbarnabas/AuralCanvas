@@ -63,7 +63,25 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          name: Aural Canvas v1.0.0
+          draft: false
+          prerelease: false
           files: artifacts/**
           generate_release_notes: true
+          body: |
+            ## Install Aural Canvas
+
+            ### macOS
+            1. Download `Aural Canvas-*-mac-arm64.dmg` (Apple Silicon) or `*-mac-x64.dmg` (Intel)
+            2. Open the `.dmg` file
+            3. Drag **Aural Canvas** into **Applications**
+            4. Launch from Applications (right-click → Open the first time if macOS blocks it)
+
+            ### Windows
+            1. Download `Aural Canvas-*-win-x64.exe`
+            2. Run the installer and follow the prompts
+            3. Launch **Aural Canvas** from the Start menu or desktop shortcut
+
+            No Node.js or other setup required — these are standalone desktop apps.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
