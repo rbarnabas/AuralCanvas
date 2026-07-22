@@ -41,12 +41,7 @@
     ],
     "mac": {
       "category": "public.app-category.music",
-      "target": [
-        {
-          "target": "dmg",
-          "arch": ["x64", "arm64"]
-        }
-      ],
+      "target": ["dmg"],
       "artifactName": "${productName}-${version}-mac-${arch}.${ext}",
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
@@ -54,7 +49,7 @@
       "entitlementsInherit": "build/entitlements.mac.plist"
     },
     "dmg": {
-      "title": "${productName} ${version}",
+      "title": "${productName} ${version} ${arch}",
       "backgroundColor": "#0d0d12",
       "window": {
         "width": 540,
