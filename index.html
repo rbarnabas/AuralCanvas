@@ -3,80 +3,83 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="aural-canvas-version" content="9d23ea5" />
-  <title>Aural Canvas — Liquid Paint & Sound</title>
-  <link rel="stylesheet" href="css/style.css?v=9d23ea5" />
+  <meta name="aural-canvas-version" content="2.0.0" />
+  <title>aural canvas — liquid paint &amp; sound</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Audiowide&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css?v=2.0.0" />
 </head>
 <body>
   <div id="app">
     <header class="header">
-      <h1>Aural Canvas</h1>
-      <p class="subtitle">Liquid paint on a moving sonic canvas · build 9d23ea5</p>
+      <h1>aural canvas</h1>
+      <p class="subtitle">liquid paint on a moving sonic canvas · <span id="version-tag">v2.0.0 desktop</span></p>
     </header>
 
     <div class="workspace">
       <aside class="panel panel-left">
         <section class="panel-section">
-          <h2>Mode</h2>
+          <h2>mode</h2>
           <div class="mode-toggle">
-            <button id="btn-paint" class="mode-btn active" data-mode="paint">Paint</button>
-            <button id="btn-push" class="mode-btn" data-mode="push">Push</button>
+            <button id="btn-paint" class="mode-btn active" data-mode="paint">paint</button>
+            <button id="btn-push" class="mode-btn" data-mode="push">push</button>
           </div>
         </section>
 
         <section class="panel-section">
-          <h2>Paint</h2>
+          <h2>paint</h2>
           <label class="control">
-            <span>Color</span>
+            <span>color</span>
             <input type="color" id="paint-color" value="#6c5ce7" />
           </label>
           <label class="control">
-            <span>Size <output id="out-size">0.25</output></span>
+            <span>size <output id="out-size">0.25</output></span>
             <input type="range" id="paint-size" min="0.01" max="1" step="0.01" value="0.25" />
           </label>
           <label class="control">
-            <span>Force <output id="out-force">6000</output></span>
+            <span>force <output id="out-force">6000</output></span>
             <input type="range" id="paint-force" min="100" max="20000" step="100" value="6000" />
           </label>
           <label class="control">
-            <span>Push <output id="out-push">0.5</output></span>
+            <span>push <output id="out-push">0.5</output></span>
             <input type="range" id="paint-push" min="0" max="2" step="0.01" value="0.5" />
           </label>
         </section>
 
         <section class="panel-section">
-          <h2>Canvas (Loom)</h2>
+          <h2>canvas (loom)</h2>
           <label class="control">
-            <span>Rotation <output id="out-rotation">0°</output></span>
+            <span>rotation <output id="out-rotation">0°</output></span>
             <input type="range" id="canvas-rotation" min="-180" max="180" step="1" value="0" />
           </label>
           <label class="control">
-            <span>Speed <output id="out-speed">0</output></span>
+            <span>speed <output id="out-speed">0</output></span>
             <input type="range" id="canvas-speed" min="-5" max="5" step="0.1" value="0" />
           </label>
           <label class="control">
-            <span>Zoom <output id="out-zoom">1</output></span>
+            <span>zoom <output id="out-zoom">1</output></span>
             <input type="range" id="canvas-zoom" min="0.5" max="2" step="0.05" value="1" />
           </label>
         </section>
 
         <section class="panel-section">
-          <h2>Frequency Axis</h2>
-          <p class="hint">Drag the crosshair on canvas or use sliders</p>
+          <h2>frequency axis</h2>
+          <p class="hint">drag crosshair when axis tool is on</p>
           <label class="control">
-            <span>Axis X <output id="out-axis-x">50%</output></span>
+            <span>axis x <output id="out-axis-x">50%</output></span>
             <input type="range" id="axis-x" min="0" max="100" step="0.5" value="50" />
           </label>
           <label class="control">
-            <span>Axis Y <output id="out-axis-y">50%</output></span>
+            <span>axis y <output id="out-axis-y">50%</output></span>
             <input type="range" id="axis-y" min="0" max="100" step="0.5" value="50" />
           </label>
           <label class="control">
-            <span>Freq Min <output id="out-freq-min">0 Hz</output></span>
+            <span>freq min <output id="out-freq-min">0 hz</output></span>
             <input type="range" id="freq-min" min="0" max="1000" step="1" value="0" />
           </label>
           <label class="control">
-            <span>Freq Max <output id="out-freq-max">1000 Hz</output></span>
+            <span>freq max <output id="out-freq-max">1000 hz</output></span>
             <input type="range" id="freq-max" min="0" max="1000" step="1" value="1000" />
           </label>
         </section>
@@ -88,88 +91,104 @@
           <canvas id="overlay-canvas"></canvas>
         </div>
         <div class="canvas-toolbar">
-          <button id="btn-axis-tool" class="tool-btn" title="Move frequency axis">Axis Tool</button>
-          <button id="btn-clear" class="tool-btn danger">Clear Canvas</button>
-          <span id="freq-readout" class="freq-readout">— Hz</span>
+          <button id="btn-axis-tool" class="tool-btn" title="move frequency axis">axis tool</button>
+          <button id="btn-daw-toggle" class="tool-btn" title="mini digital audio workstation">daw</button>
+          <button id="btn-clear" class="tool-btn danger">clear canvas</button>
+          <span id="freq-readout" class="freq-readout">— hz</span>
         </div>
       </main>
 
       <aside class="panel panel-right">
         <section class="panel-section">
-          <h2>Audio</h2>
+          <h2>audio</h2>
           <label class="control">
-            <span>Volume <output id="out-volume">70%</output></span>
+            <span>volume <output id="out-volume">70%</output></span>
             <input type="range" id="volume" min="0" max="100" step="1" value="70" />
           </label>
           <label class="control">
-            <span>Waveform</span>
+            <span>waveform</span>
             <select id="waveform">
-              <option value="sine">Sine</option>
-              <option value="square">Square</option>
-              <option value="sawtooth">Sawtooth</option>
-              <option value="triangle">Triangle</option>
+              <option value="sine">sine</option>
+              <option value="square">square</option>
+              <option value="sawtooth">sawtooth</option>
+              <option value="triangle">triangle</option>
             </select>
           </label>
           <label class="control">
-            <span>Y → Amplitude <output id="out-y-amp">on</output></span>
+            <span>y → amplitude <output id="out-y-amp">on</output></span>
             <input type="range" id="y-amplitude" min="0" max="1" step="0.05" value="1" />
           </label>
           <label class="control">
-            <span>Voices <output id="out-voices">4</output></span>
+            <span>voices <output id="out-voices">4</output></span>
             <input type="range" id="voice-count" min="1" max="8" step="1" value="4" />
           </label>
         </section>
 
         <section class="panel-section">
-          <h2>Sample Import</h2>
+          <h2>sample import</h2>
           <label class="control file-label">
-            <span>Upload .wav / .mp3</span>
+            <span>upload .wav / .mp3</span>
             <input type="file" id="audio-upload" accept=".wav,.mp3,audio/wav,audio/mpeg" />
           </label>
-          <button id="btn-use-tone" class="tool-btn" disabled>Use Tone Generator</button>
-          <p id="sample-name" class="hint">Default: oscillator tone</p>
+          <button id="btn-use-tone" class="tool-btn" disabled>use tone generator</button>
+          <p id="sample-name" class="hint">default: oscillator tone</p>
         </section>
 
         <section class="panel-section">
-          <h2>Record & Export</h2>
+          <h2>record &amp; export</h2>
           <div class="record-row">
-            <button id="btn-record" class="record-btn">● Record</button>
-            <span id="record-status" class="hint">Ready</span>
+            <button id="btn-record" class="record-btn">● record</button>
+            <span id="record-status" class="hint">ready</span>
           </div>
+          <p class="hint">with daw open, record routes to armed track</p>
           <div class="export-grid">
-            <button id="export-webm" class="export-btn" disabled>WebM</button>
-            <button id="export-mp4" class="export-btn" disabled>MP4</button>
-            <button id="export-wav" class="export-btn" disabled>WAV</button>
-            <button id="export-mp3" class="export-btn" disabled>MP3</button>
+            <button id="export-webm" class="export-btn" disabled>webm</button>
+            <button id="export-mp4" class="export-btn" disabled>mp4</button>
+            <button id="export-webm-4k" class="export-btn" disabled>4k webm</button>
+            <button id="export-mp4-4k" class="export-btn" disabled>4k mp4</button>
+            <button id="export-wav" class="export-btn" disabled>wav</button>
+            <button id="export-mp3" class="export-btn" disabled>mp3</button>
           </div>
         </section>
 
         <section class="panel-section help">
-          <h2>How to Play</h2>
+          <h2>how to play</h2>
           <ul>
-            <li>Run via a local server after download — do not double-click <code>index.html</code></li>
-            <li><strong>Paint</strong> — add liquid color and push fluid</li>
-            <li><strong>Push</strong> — move existing paint only</li>
-            <li><strong>Axis Tool</strong> — drag the crosshair to set 0 Hz origin</li>
-            <li>X axis maps 0–1000 Hz; Y modulates amplitude</li>
-            <li>Click canvas once to enable audio</li>
+            <li><strong>paint</strong> — add liquid color and push fluid</li>
+            <li><strong>push</strong> — move existing paint only</li>
+            <li><strong>axis tool</strong> — show crosshair, drag to set 0 hz origin</li>
+            <li><strong>daw</strong> — multitrack mixer at bottom; record into timeline</li>
+            <li>4k export renders on demand — live canvas stays fast</li>
           </ul>
         </section>
       </aside>
     </div>
+
+    <div id="daw-panel" class="daw-panel">
+      <div class="daw-header">
+        <span class="daw-title">mini daw</span>
+        <button type="button" id="daw-popout" class="tool-btn">pop out</button>
+        <div class="daw-export-row">
+          <label class="daw-mini">sr <output id="out-daw-sr">48000</output>
+            <input type="range" id="daw-samplerate" min="44100" max="192000" step="1000" value="48000" />
+          </label>
+          <label class="daw-mini">bit <output id="out-daw-bd">24</output>
+            <input type="range" id="daw-bitdepth" min="16" max="24" step="8" value="24" />
+          </label>
+          <button type="button" id="daw-export-wav" class="export-btn">export mix wav</button>
+        </div>
+      </div>
+      <div class="daw-body">
+        <div id="daw-mixer" class="daw-mixer"></div>
+        <div class="daw-timeline-wrap">
+          <div id="daw-timeline" class="daw-timeline"></div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js"></script>
-  <script type="module">
-    window.addEventListener("error", (e) => {
-      const el = document.getElementById("boot-error");
-      if (el) {
-        el.hidden = false;
-        el.textContent = "App failed to load: " + (e.message || "unknown error");
-      }
-    });
-  </script>
-  <script type="module" src="js/main.js?v=9d23ea5"></script>
-  <p id="boot-error" hidden style="position:fixed;bottom:12px;left:12px;right:12px;padding:12px;background:#e74c3c;color:#fff;border-radius:8px;z-index:9999;font-size:13px;"></p>
+  <script type="module" src="js/main.js?v=2.0.0"></script>
+  <p id="boot-error" hidden class="boot-error"></p>
 </body>
 </html>

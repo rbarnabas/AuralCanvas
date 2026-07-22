@@ -1,5 +1,5 @@
 /**
- * Web Audio engine: tone generator + sample playback mapped to XY positions.
+ * Web Audio engine v2 — smooth voices, DAW routing, no click pops.
  */
 
 export class AudioEngine {
@@ -9,6 +9,7 @@ export class AudioEngine {
     this.recordDest = null;
     this.analyser = null;
     this.started = false;
+    this.dawInput = null;
 
     this.waveform = "sine";
     this.volume = 0.7;
@@ -23,21 +24,49 @@ export class AudioEngine {
 
     this.voices = [];
     this.pointerVoice = null;
+    this._voicePool = [];
   }
 
   async init() {
     if (this.ctx) return;
-    this.ctx = new AudioContext();
+    const options = { latencyHint: "interactive" };
+    try {
+      this.ctx = new AudioContext(options);
+    } catch {
+      this.ctx = new AudioContext();
+    }
+
     this.masterGain = this.ctx.createGain();
+    this.masterGain.gain.value = 0;
     this.analyser = this.ctx.createAnalyser();
     this.recordDest = this.ctx.createMediaStreamDestination();
 
     this.masterGain.connect(this.analyser);
-    this.analyser.connect(this.ctx.destination);
     this.masterGain.connect(this.recordDest);
+    this._connectOutput(this.masterGain);
 
-    this.masterGain.gain.value = this.volume;
+    this.masterGain.gain.setTargetAtTime(this.volume, this.ctx.currentTime, 0.08);
     this.started = true;
+  }
+
+  _connectOutput(node) {
+    node.connect(this.ctx.destination);
+  }
+
+  /** Route master bus through DAW (or back to speakers). */
+  setDawInput(dawInputNode) {
+    if (!this.masterGain) return;
+    try {
+      this.masterGain.disconnect();
+    } catch (_) {}
+    this.dawInput = dawInputNode;
+    if (dawInputNode) {
+      this.masterGain.connect(dawInputNode);
+    } else {
+      this.masterGain.connect(this.analyser);
+      this.masterGain.connect(this.recordDest);
+      this._connectOutput(this.masterGain);
+    }
   }
 
   async resume() {
@@ -47,7 +76,9 @@ export class AudioEngine {
 
   setVolume(v) {
     this.volume = v;
-    if (this.masterGain) this.masterGain.gain.value = v;
+    if (this.masterGain) {
+      this.masterGain.gain.setTargetAtTime(v, this.ctx.currentTime, 0.05);
+    }
   }
 
   setWaveform(w) {
@@ -63,7 +94,6 @@ export class AudioEngine {
     this.freqMax = Math.max(min, max);
   }
 
-  /** Map normalized position to frequency */
   posToFreq(nx, ny, axisX, axisY) {
     const dx = nx - axisX;
     const range = 0.5;
@@ -75,14 +105,29 @@ export class AudioEngine {
   posToAmp(ny, axisY) {
     const dy = Math.abs(ny - axisY);
     const amp = 1 - Math.min(1, dy * 2);
-    return 0.12 + amp * this.yAmplitude * 0.45;
+    return 0.08 + amp * this.yAmplitude * 0.4;
+  }
+
+  _rampGain(gainNode, target, attackSec = 0.06) {
+    const t = this.ctx.currentTime;
+    gainNode.gain.cancelScheduledValues(t);
+    gainNode.gain.setValueAtTime(gainNode.gain.value, t);
+    gainNode.gain.exponentialRampToValueAtTime(Math.max(0.0001, target), t + attackSec);
+  }
+
+  _muteGain(gainNode, releaseSec = 0.12) {
+    const t = this.ctx.currentTime;
+    gainNode.gain.cancelScheduledValues(t);
+    const v = Math.max(0.0001, gainNode.gain.value);
+    gainNode.gain.setValueAtTime(v, t);
+    gainNode.gain.exponentialRampToValueAtTime(0.0001, t + releaseSec);
   }
 
   createVoice(freq, amp) {
     const t = this.ctx.currentTime;
     const gain = this.ctx.createGain();
-    gain.gain.setValueAtTime(0, t);
-    gain.gain.linearRampToValueAtTime(amp, t + 0.02);
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(Math.max(0.0001, amp), t + 0.06);
     gain.connect(this.masterGain);
 
     if (this.useSample && this.sampleBuffer) {
@@ -105,13 +150,18 @@ export class AudioEngine {
 
   releaseVoice(voice) {
     if (!voice) return;
-    const t = this.ctx.currentTime;
-    voice.gain.gain.cancelScheduledValues(t);
-    voice.gain.gain.setValueAtTime(voice.gain.gain.value, t);
-    voice.gain.gain.linearRampToValueAtTime(0, t + 0.08);
-    const stopAt = t + 0.1;
-    if (voice.osc) voice.osc.stop(stopAt);
-    if (voice.src) voice.src.stop(stopAt);
+    this._muteGain(voice.gain, 0.1);
+    const stopAt = this.ctx.currentTime + 0.12;
+    if (voice.osc) {
+      try {
+        voice.osc.stop(stopAt);
+      } catch (_) {}
+    }
+    if (voice.src) {
+      try {
+        voice.src.stop(stopAt);
+      } catch (_) {}
+    }
     setTimeout(() => {
       try {
         voice.gain.disconnect();
@@ -124,8 +174,7 @@ export class AudioEngine {
 
     if (!active) {
       if (this.pointerVoice) {
-        this.releaseVoice(this.pointerVoice);
-        this.pointerVoice = null;
+        this._muteGain(this.pointerVoice.gain, 0.08);
       }
       return;
     }
@@ -138,12 +187,12 @@ export class AudioEngine {
     } else {
       const t = this.ctx.currentTime;
       if (this.pointerVoice.osc) {
-        this.pointerVoice.osc.frequency.setTargetAtTime(freq, t, 0.02);
+        this.pointerVoice.osc.frequency.setTargetAtTime(freq, t, 0.04);
       }
       if (this.pointerVoice.src) {
-        this.pointerVoice.src.playbackRate.setTargetAtTime(Math.max(0.1, freq / 440), t, 0.02);
+        this.pointerVoice.src.playbackRate.setTargetAtTime(Math.max(0.1, freq / 440), t, 0.04);
       }
-      this.pointerVoice.gain.gain.setTargetAtTime(amp, t, 0.02);
+      this._rampGain(this.pointerVoice.gain, amp, 0.04);
     }
 
     return freq;
@@ -153,8 +202,7 @@ export class AudioEngine {
     if (!this.started) return;
 
     while (this.voices.length > this.voiceCount) {
-      const v = this.voices.pop();
-      this.releaseVoice(v);
+      this.releaseVoice(this.voices.pop());
     }
 
     const used = Math.min(regions.length, this.voiceCount);
@@ -167,9 +215,9 @@ export class AudioEngine {
       if (i < this.voices.length) {
         const v = this.voices[i];
         const t = this.ctx.currentTime;
-        if (v.osc) v.osc.frequency.setTargetAtTime(freq, t, 0.05);
-        if (v.src) v.src.playbackRate.setTargetAtTime(Math.max(0.1, freq / 440), t, 0.05);
-        v.gain.gain.setTargetAtTime(amp, t, 0.05);
+        if (v.osc) v.osc.frequency.setTargetAtTime(freq, t, 0.06);
+        if (v.src) v.src.playbackRate.setTargetAtTime(Math.max(0.1, freq / 440), t, 0.06);
+        this._rampGain(v.gain, amp, 0.05);
       } else {
         this.voices.push(this.createVoice(freq, amp));
       }
@@ -207,5 +255,9 @@ export class AudioEngine {
 
   getMasterGain() {
     return this.masterGain;
+  }
+
+  getSampleRate() {
+    return this.ctx?.sampleRate ?? 48000;
   }
 }

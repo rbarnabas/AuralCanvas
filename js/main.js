@@ -1,6 +1,9 @@
 import { FluidSim } from "./fluid.js";
 import { AudioEngine } from "./audio.js";
 import { Recorder } from "./recorder.js";
+import { MiniDAW } from "./daw.js";
+
+const APP_VERSION = "2.0.0";
 
 const fluidCanvas = document.getElementById("fluid-canvas");
 const overlayCanvas = document.getElementById("overlay-canvas");
@@ -11,6 +14,8 @@ const octx = overlayCanvas.getContext("2d");
 const fluid = new FluidSim();
 const audio = new AudioEngine();
 const recorder = new Recorder(audio, fluidCanvas);
+const daw = new MiniDAW(audio);
+recorder.setDaw(daw);
 
 const state = {
   axisX: 0.5,
@@ -23,9 +28,9 @@ const state = {
   draggingAxis: false,
   pointer: { down: false, x: 0, y: 0, nx: 0, ny: 0 },
   lastFreq: 0,
+  dawOpen: false,
 };
 
-// --- Resize ---
 function resize() {
   const rect = canvasWrap.getBoundingClientRect();
   const dpr = window.devicePixelRatio || 1;
@@ -41,7 +46,6 @@ function resize() {
 window.addEventListener("resize", resize);
 resize();
 
-// --- Coordinate transforms ---
 function getCanvasRect() {
   return canvasWrap.getBoundingClientRect();
 }
@@ -86,15 +90,20 @@ function axisScreenPos() {
   };
 }
 
-// --- Drawing overlay (axis crosshair) ---
+/** Axis overlay only when tool is active — never burned into fluid canvas / recording. */
 function drawOverlay() {
   const rect = getCanvasRect();
   octx.clearRect(0, 0, rect.width, rect.height);
 
-  const { x: ax, y: ay } = axisScreenPos();
+  if (!state.axisTool || recorder.recording) {
+    overlayCanvas.style.visibility = "hidden";
+    return;
+  }
+  overlayCanvas.style.visibility = "visible";
 
+  const { x: ax, y: ay } = axisScreenPos();
   octx.save();
-  octx.strokeStyle = "rgba(108, 92, 231, 0.7)";
+  octx.strokeStyle = "rgba(108, 92, 231, 0.85)";
   octx.lineWidth = 1.5;
   octx.setLineDash([6, 4]);
 
@@ -102,57 +111,43 @@ function drawOverlay() {
   octx.moveTo(0, ay);
   octx.lineTo(rect.width, ay);
   octx.stroke();
-
   octx.beginPath();
   octx.moveTo(ax, 0);
   octx.lineTo(ax, rect.height);
   octx.stroke();
   octx.setLineDash([]);
 
-  const grad = octx.createLinearGradient(ax, 0, rect.width, 0);
-  grad.addColorStop(0, "rgba(108,92,231,0)");
-  grad.addColorStop(Math.max(0, (ax - 20) / rect.width), "rgba(108,92,231,0)");
-  grad.addColorStop(Math.min(1, ax / rect.width), "rgba(108,92,231,0.3)");
-  grad.addColorStop(1, "rgba(108,92,231,0.6)");
-  octx.fillStyle = grad;
-  octx.fillRect(0, 0, rect.width, rect.height);
-
   octx.beginPath();
-  octx.arc(ax, ay, state.axisTool ? 10 : 6, 0, Math.PI * 2);
-  octx.fillStyle = state.axisTool ? "rgba(108, 92, 231, 0.9)" : "rgba(108, 92, 231, 0.5)";
+  octx.arc(ax, ay, 12, 0, Math.PI * 2);
+  octx.fillStyle = "rgba(108, 92, 231, 0.95)";
   octx.fill();
   octx.strokeStyle = "#fff";
   octx.lineWidth = 2;
   octx.stroke();
 
-  octx.font = "11px sans-serif";
-  octx.fillStyle = "rgba(200,200,220,0.8)";
-  octx.fillText("0 Hz", ax + 12, ay - 8);
-  octx.fillText(`${audio.freqMax} Hz →`, rect.width - 80, ay - 8);
+  octx.font = '12px "Audiowide", sans-serif';
+  octx.fillStyle = "rgba(200,200,220,0.9)";
+  octx.fillText("0 hz", ax + 14, ay - 10);
+  octx.fillText(`${audio.freqMax} hz →`, rect.width - 90, ay - 10);
   octx.restore();
 }
 
-// --- Main render loop ---
 let lastTime = performance.now();
 
 function frame(now) {
   const dt = Math.min(0.05, (now - lastTime) / 1000);
   lastTime = now;
-
   state.autoAngle += state.speed * dt * 15;
-
   fluid.step(dt);
 
   const rect = getCanvasRect();
   fctx.save();
   fctx.fillStyle = "#080810";
   fctx.fillRect(0, 0, rect.width, rect.height);
-
   fctx.translate(rect.width / 2, rect.height / 2);
   fctx.rotate((state.rotation + state.autoAngle) * (Math.PI / 180));
   fctx.scale(state.zoom, state.zoom);
   fctx.translate(-rect.width / 2, -rect.height / 2);
-
   fluid.renderTo(fctx, rect.width, rect.height);
   fctx.restore();
 
@@ -164,8 +159,7 @@ function frame(now) {
   if (state.pointer.down && !state.draggingAxis) {
     const freq = audio.updatePointerSound(state.pointer.nx, state.pointer.ny, state.axisX, state.axisY, true);
     if (freq != null) {
-      state.lastFreq = freq;
-      document.getElementById("freq-readout").textContent = `${Math.round(freq)} Hz`;
+      document.getElementById("freq-readout").textContent = `${Math.round(freq)} hz`;
     }
   } else if (!state.pointer.down) {
     audio.updatePointerSound(0, 0, 0, 0, false);
@@ -175,7 +169,6 @@ function frame(now) {
 }
 requestAnimationFrame(frame);
 
-// --- Pointer interaction ---
 function splatFromPointer(nx, ny, dx, dy) {
   fluid.splat(nx, ny, dx, dy);
 }
@@ -193,7 +186,7 @@ async function onPointerDown(e) {
   if (state.axisTool) {
     const axis = axisScreenPos();
     const dist = Math.hypot(local.rawX - axis.x, local.rawY - axis.y);
-    if (dist < 18) {
+    if (dist < 20) {
       state.draggingAxis = true;
       canvasWrap.classList.add("axis-dragging");
       return;
@@ -210,7 +203,6 @@ async function onPointerDown(e) {
 
 function onPointerMove(e) {
   const local = screenToLocal(e.clientX, e.clientY);
-
   if (state.draggingAxis) {
     const rect = getCanvasRect();
     const rad = (-state.rotation - state.autoAngle) * (Math.PI / 180);
@@ -227,13 +219,10 @@ function onPointerMove(e) {
     syncAxisSliders();
     return;
   }
-
   if (!state.pointer.down) return;
-
   const dx = local.x - state.pointer.x;
   const dy = local.y - state.pointer.y;
   splatFromPointer(local.nx, local.ny, dx, dy);
-
   state.pointer.x = local.x;
   state.pointer.y = local.y;
   state.pointer.nx = local.nx;
@@ -259,14 +248,10 @@ for (const target of [fluidCanvas, canvasWrap]) {
   target.addEventListener("pointerleave", onPointerUp);
 }
 
-// --- UI bindings ---
 function bindRange(id, outId, fmt, onChange) {
   const el = document.getElementById(id);
   const out = document.getElementById(outId);
-  if (!el) {
-    console.error("Missing control:", id);
-    return;
-  }
+  if (!el) return;
   const update = () => {
     if (out) out.textContent = fmt(el.value);
     onChange(el.value);
@@ -279,9 +264,7 @@ function bindRange(id, outId, fmt, onChange) {
 bindRange("paint-size", "out-size", (v) => (+v).toFixed(2), (v) => (fluid.splatRadius = +v));
 bindRange("paint-force", "out-force", (v) => v, (v) => (fluid.splatForce = +v));
 bindRange("paint-push", "out-push", (v) => (+v).toFixed(2), (v) => (fluid.pushStrength = +v));
-
 document.getElementById("paint-color").addEventListener("input", (e) => fluid.setColor(e.target.value));
-
 document.getElementById("btn-paint").addEventListener("click", () => setMode("paint"));
 document.getElementById("btn-push").addEventListener("click", () => setMode("push"));
 
@@ -304,14 +287,8 @@ function syncAxisSliders() {
 
 bindRange("axis-x", "out-axis-x", (v) => `${(+v).toFixed(0)}%`, (v) => (state.axisX = +v / 100));
 bindRange("axis-y", "out-axis-y", (v) => `${(+v).toFixed(0)}%`, (v) => (state.axisY = +v / 100));
-
-bindRange("freq-min", "out-freq-min", (v) => `${v} Hz`, (v) => {
-  audio.setFreqRange(+v, audio.freqMax);
-});
-bindRange("freq-max", "out-freq-max", (v) => `${v} Hz`, (v) => {
-  audio.setFreqRange(audio.freqMin, +v);
-});
-
+bindRange("freq-min", "out-freq-min", (v) => `${v} hz`, (v) => audio.setFreqRange(+v, audio.freqMax));
+bindRange("freq-max", "out-freq-max", (v) => `${v} hz`, (v) => audio.setFreqRange(audio.freqMin, +v));
 bindRange("volume", "out-volume", (v) => `${v}%`, (v) => audio.setVolume(+v / 100));
 document.getElementById("waveform").addEventListener("change", (e) => audio.setWaveform(e.target.value));
 bindRange("y-amplitude", "out-y-amp", (v) => (+v >= 0.5 ? "on" : "low"), (v) => (audio.yAmplitude = +v));
@@ -334,52 +311,92 @@ document.getElementById("audio-upload").addEventListener("change", async (e) => 
   if (!file) return;
   try {
     const name = await audio.loadSample(file);
-    document.getElementById("sample-name").textContent = `Sample: ${name}`;
+    document.getElementById("sample-name").textContent = `sample: ${name}`;
     document.getElementById("btn-use-tone").disabled = false;
-  } catch (err) {
-    alert("Could not load audio file. Please use a valid .wav or .mp3 file.");
-    console.error(err);
+  } catch {
+    alert("Could not load audio file.");
   }
 });
 
 document.getElementById("btn-use-tone").addEventListener("click", () => {
   audio.useToneGenerator();
-  document.getElementById("sample-name").textContent = "Default: oscillator tone";
+  document.getElementById("sample-name").textContent = "default: oscillator tone";
   document.getElementById("btn-use-tone").disabled = true;
   document.getElementById("audio-upload").value = "";
 });
 
-// --- Recording ---
 const recordBtn = document.getElementById("btn-record");
 const recordStatus = document.getElementById("record-status");
-const exportBtns = ["export-webm", "export-mp4", "export-wav", "export-mp3"].map((id) =>
-  document.getElementById(id)
-);
+const exportBtns = [
+  "export-webm",
+  "export-mp4",
+  "export-webm-4k",
+  "export-mp4-4k",
+  "export-wav",
+  "export-mp3",
+].map((id) => document.getElementById(id));
 
 function setExportEnabled(on) {
-  exportBtns.forEach((b) => (b.disabled = !on));
+  exportBtns.forEach((b) => {
+    if (b) b.disabled = !on;
+  });
 }
 
+recorder.setExportStatusEl(recordStatus);
+
 recordBtn.addEventListener("click", async () => {
+  const useDaw = state.dawOpen && daw.enabled;
   if (!recorder.recording) {
-    await recorder.start();
+    await daw.init();
+    await recorder.start({ useDaw });
     recordBtn.classList.add("recording");
-    recordBtn.textContent = "■ Stop";
-    recordStatus.textContent = "Recording…";
+    recordBtn.textContent = "■ stop";
+    recordStatus.textContent = useDaw ? "recording → daw track…" : "recording…";
     setExportEnabled(false);
   } else {
-    await recorder.stop();
+    await recorder.stop({ useDaw });
     recordBtn.classList.remove("recording");
-    recordBtn.textContent = "● Record";
-    recordStatus.textContent = "Recording saved";
-    setExportEnabled(true);
+    recordBtn.textContent = "● record";
+    recordStatus.textContent = useDaw ? "clip added to timeline" : "recording saved";
+    setExportEnabled(!useDaw);
   }
 });
 
 document.getElementById("export-webm").addEventListener("click", () => recorder.exportWebM());
 document.getElementById("export-mp4").addEventListener("click", () => recorder.exportMP4());
+document.getElementById("export-webm-4k").addEventListener("click", () => recorder.export4K("webm"));
+document.getElementById("export-mp4-4k").addEventListener("click", () => recorder.export4K("mp4"));
 document.getElementById("export-wav").addEventListener("click", () => recorder.exportWAV());
 document.getElementById("export-mp3").addEventListener("click", () => recorder.exportMP3());
 
+const dawPanel = document.getElementById("daw-panel");
+document.getElementById("btn-daw-toggle").addEventListener("click", async () => {
+  await daw.init();
+  state.dawOpen = !state.dawOpen;
+  dawPanel.classList.toggle("open", state.dawOpen);
+  document.getElementById("btn-daw-toggle").classList.toggle("active", state.dawOpen);
+  daw.setEnabled(state.dawOpen);
+  daw.renderUI();
+  document.getElementById("app").classList.toggle("daw-open", state.dawOpen);
+});
+
+document.getElementById("daw-popout").addEventListener("click", () => {
+  daw.poppedOut = !daw.poppedOut;
+  dawPanel.classList.toggle("popout", daw.poppedOut);
+});
+
+document.getElementById("daw-export-wav").addEventListener("click", async () => {
+  recordStatus.textContent = "rendering daw mix…";
+  const blob = await daw.exportMix("wav");
+  daw.downloadBlob(blob, `aural-canvas-daw-${Date.now()}.wav`);
+  recordStatus.textContent = "daw mix exported";
+});
+
+bindRange("daw-samplerate", "out-daw-sr", (v) => v, (v) => (daw.exportSampleRate = +v));
+bindRange("daw-bitdepth", "out-daw-bd", (v) => v, (v) => (daw.exportBitDepth = +v));
+
 state.axisTool = false;
 document.getElementById("btn-axis-tool").classList.remove("active");
+document.getElementById("version-tag").textContent = `v${APP_VERSION} desktop`;
+
+daw.init().catch(console.error);

@@ -62,7 +62,7 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: Aural Canvas v1.0.0
+          name: Aural Canvas ${{ github.ref_name }}
           draft: false
           prerelease: false
           files: artifacts/**
